@@ -77,12 +77,14 @@ func (uh *UserController) Create(c echo.Context) error {
 		return helpers.Response(c, http.StatusBadRequest, nil, err.Error())
 	}
 
-	photo_url, err := uh.imageHelper.Writer(request.Photo, fmt.Sprintf("%s.png", time.Now().Format("20061021545.000000000")))
-	if err != nil {
-		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	if request.Photo != "" {
+		photo_url, err := uh.imageHelper.Writer(request.Photo, fmt.Sprintf("%s.png", time.Now().Format("20061021545.000000000")))
+		if err != nil {
+			return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+		}
+		request.Photo = photo_url
 	}
 
-	request.Photo = photo_url
 	data, err := uh.model.Create(&request)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, nil, "")
@@ -102,12 +104,13 @@ func (uh *UserController) Update(c echo.Context) error {
 		return helpers.Response(c, http.StatusBadRequest, nil, err.Error())
 	}
 
-	photo_url, err := uh.imageHelper.Writer(request.Photo, fmt.Sprintf("%s.png", time.Now().Format("20061021545.000000000")))
-	if err != nil {
-		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	if request.Photo != "" {
+		photo_url, err := uh.imageHelper.Writer(request.Photo, fmt.Sprintf("%s.png", time.Now().Format("20061021545.000000000")))
+		if err != nil {
+			return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+		}
+		request.Photo = photo_url
 	}
-
-	request.Photo = photo_url
 	data, err := uh.model.Update(request)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
