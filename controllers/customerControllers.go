@@ -17,45 +17,55 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserController struct {
+type CustomerController struct {
 	db          *gorm.DB
-	model       *models.UserModel
+	model       *models.CustomerModel
 	cfg         *config.Config
 	imageHelper *helpers.ImageHelper
 	assetPath   string
 }
 
-func NewUserController(db *gorm.DB, model *models.UserModel, cfg *config.Config, imageHelper *helpers.ImageHelper, assetPath string) *UserController {
-	return &UserController{db, model, cfg, imageHelper, assetPath}
+func NewCustomerController(db *gorm.DB, model *models.CustomerModel, cfg *config.Config, imageHelper *helpers.ImageHelper, assetPath string) *CustomerController {
+	return &CustomerController{db, model, cfg, imageHelper, assetPath}
 }
 
-func (uh *UserController) Index(c echo.Context) error {
+func (uh *CustomerController) Index(c echo.Context) error {
 	per_page, err := strconv.Atoi(c.QueryParam("per_page"))
 	if err != nil {
 		per_page = 10
-		log.Printf("Failed to parse per_page query parameter. Defaulting to %d", per_page)
+		log.Println("Failed to parse per_page query parameter. Defaulting to 10")
 	}
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil {
 		page = 1
-		log.Printf("Failed to parse page query parameter. Defaulting to %d", page)
+		log.Println("Failed to parse page query parameter. Defaulting to 1")
+	}
+	sort := c.QueryParam("sort")
+	if sort == "" {
+		sort = "id"
+		log.Println("sort query parameter is empty. Defaulting to \"id\"")
+	}
+	order := c.QueryParam("order")
+	if sort == "" {
+		sort = "ASC"
+		log.Println("sort query parameter is empty. Defaulting to \"ASC\"")
 	}
 
 	offset := (page - 1) * per_page
-	data, total, err := uh.model.GetAll(per_page, offset)
+	data, total, err := uh.model.GetAll(per_page, offset, sort, order)
 	if err != nil {
-		return helpers.Response(c, http.StatusInternalServerError, data, err.Error())
+		return helpers.Response(c, http.StatusInternalServerError, data, "")
 	}
+
 	pagedData := helpers.PageData(data, total)
 	return helpers.Response(c, http.StatusOK, pagedData, "")
 }
 
-func (uh *UserController) GetById(c echo.Context) error {
+func (uh *CustomerController) GetById(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return err
 	}
-
 	data, err := uh.model.GetById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -66,11 +76,11 @@ func (uh *UserController) GetById(c echo.Context) error {
 	return helpers.Response(c, http.StatusOK, data, "")
 }
 
-func (uh *UserController) Create(c echo.Context) error {
-	var request structs.UserRequest
+func (uh *CustomerController) Create(c echo.Context) error {
+	var request structs.CustomerRequest
 
 	if err := c.Bind(&request); err != nil {
-		return helpers.Response(c, http.StatusBadRequest, nil, err.Error())
+		return helpers.Response(c, http.StatusBadRequest, nil, "")
 	}
 
 	if err := c.Validate(request); err != nil {
@@ -90,14 +100,14 @@ func (uh *UserController) Create(c echo.Context) error {
 		return helpers.Response(c, http.StatusInternalServerError, nil, "")
 	}
 
-	return helpers.Response(c, http.StatusCreated, data, "")
+	return helpers.Response(c, http.StatusOK, data, "")
 }
 
-func (uh *UserController) Update(c echo.Context) error {
-	var request structs.User
+func (uh *CustomerController) Update(c echo.Context) error {
+	var request structs.CustomerRequest
 
 	if err := c.Bind(&request); err != nil {
-		return helpers.Response(c, http.StatusBadRequest, nil, err.Error())
+		return helpers.Response(c, http.StatusBadRequest, nil, "")
 	}
 
 	if err := c.Validate(request); err != nil {
@@ -111,22 +121,23 @@ func (uh *UserController) Update(c echo.Context) error {
 		}
 		request.Photo = photo_url
 	}
-	data, err := uh.model.Update(request)
+
+	data, err := uh.model.Update(&request)
 	if err != nil {
-		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+		return helpers.Response(c, http.StatusInternalServerError, err.Error(), "")
 	}
 
-	return helpers.Response(c, http.StatusOK, data, "User updated")
+	return helpers.Response(c, http.StatusOK, data, "Customer updated")
 }
 
-func (uh *UserController) Delete(c echo.Context) error {
+func (uh *CustomerController) Delete(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return err
 	}
 	if err := uh.model.Delete(id); err != nil {
-		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+		return helpers.Response(c, http.StatusInternalServerError, err.Error(), "")
 	}
 
-	return helpers.Response(c, http.StatusOK, true, "User deleted")
+	return helpers.Response(c, http.StatusOK, true, "Customer deleted")
 }

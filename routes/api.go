@@ -54,7 +54,7 @@ func (s *HTTPServer) RunHTTPServer() {
 
 	s.httpServer.Static(api.cfg.HTTP.AssetEndpoint, api.cfg.AssetStorage.Path)
 	api.UserAndAuth()
-	// api.Customer()
+	api.Customer()
 	// api.ProductCategory()
 	// api.Product()
 	// api.Sales()

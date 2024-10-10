@@ -26,7 +26,7 @@ func InitVersionOne(e *echo.Echo, db *gorm.DB, cfg *config.Config) *APIVersionOn
 		db,
 		cfg,
 		e.Group("/api/v1"),
-		fmt.Sprintf("%s/%s", cfg.HTTP.Domain, cfg.HTTP.Domain),
+		fmt.Sprintf("%s/%s", cfg.HTTP.Domain, cfg.HTTP.AssetEndpoint),
 	}
 }
 
@@ -52,4 +52,21 @@ func (av *APIVersionOne) UserAndAuth() {
 	user.GET("/:id", userController.GetById)
 	user.PUT("", userController.Update)
 	user.DELETE("/:id", userController.Delete)
+}
+
+func (av *APIVersionOne) Customer() {
+	customerModel := models.NewCustomerModel(av.db)
+	imageHelper, err := helpers.NewImageHelper(av.cfg.AssetStorage.Path, "profile_photos")
+	if err != nil {
+		log.Fatal("Failed to initiate an image helper:", err)
+	}
+	customerController := controllers.NewCustomerController(av.db, customerModel, av.cfg, imageHelper, av.assetsPath)
+
+	// customer := av.api.Group("/customers", echojwt.WithConfig(av.cfg.JWT.Config))
+	customer := av.api.Group("/customers")
+	customer.GET("", customerController.Index)
+	customer.POST("", customerController.Create)
+	customer.GET("/:id", customerController.GetById)
+	customer.PUT("", customerController.Update)
+	customer.DELETE("/:id", customerController.Delete)
 }
