@@ -26,7 +26,7 @@ func InitVersionOne(e *echo.Echo, db *gorm.DB, cfg *config.Config) *APIVersionOn
 		db,
 		cfg,
 		e.Group("/api/v1"),
-		fmt.Sprintf("%s/%s", cfg.HTTP.Domain, "api/v1/assets"),
+		fmt.Sprintf("%s/%s", cfg.HTTP.Domain, cfg.HTTP.Domain),
 	}
 }
 

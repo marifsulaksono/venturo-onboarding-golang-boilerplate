@@ -27,9 +27,10 @@ type (
 		Name     string
 	}
 	HTTP struct {
-		Host   string
-		Port   int
-		Domain string
+		Host          string
+		Port          int
+		Domain        string
+		AssetEndpoint string
 	}
 	JWT struct {
 		Secret []byte
@@ -60,6 +61,7 @@ func LoadConfig() (*Config, error) {
 		log.Fatal("Port must be a number")
 	}
 	domain, _ := configDefaults("DOMAIN", "http://localhost")
+	assetPath, _ := configDefaults("ASSET_PATH", "api/v1/assets")
 	jwtSecret, _ := configDefaults("JWT_SECRET", "")
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
@@ -78,9 +80,10 @@ func LoadConfig() (*Config, error) {
 			Name:     dbName,
 		},
 		HTTP: HTTP{
-			Host:   listenHost,
-			Port:   intListenPort,
-			Domain: domain,
+			Host:          listenHost,
+			Port:          intListenPort,
+			Domain:        domain,
+			AssetEndpoint: assetPath,
 		},
 		JWT: JWT{
 			Secret: []byte(jwtSecret),

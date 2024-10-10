@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -57,10 +58,9 @@ func (uh *UserController) GetById(c echo.Context) error {
 
 	data, err := uh.model.GetById(id)
 	if err != nil {
-		return helpers.Response(c, http.StatusBadRequest, nil, err.Error())
-	}
-	data.Photo, err = uh.imageHelper.Read(data.Photo)
-	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return helpers.Response(c, http.StatusNotFound, nil, err.Error())
+		}
 		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
 	}
 	return helpers.Response(c, http.StatusOK, data, "")
@@ -82,7 +82,7 @@ func (uh *UserController) Create(c echo.Context) error {
 		if err != nil {
 			return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
 		}
-		request.Photo = photo_url
+		request.Photo = uh.assetPath + photo_url
 	}
 
 	data, err := uh.model.Create(&request)
