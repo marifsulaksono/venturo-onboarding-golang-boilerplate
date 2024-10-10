@@ -82,7 +82,7 @@ func (uh *UserController) Create(c echo.Context) error {
 		if err != nil {
 			return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
 		}
-		request.Photo = uh.assetPath + photo_url
+		request.Photo = photo_url
 	}
 
 	data, err := uh.model.Create(&request)
