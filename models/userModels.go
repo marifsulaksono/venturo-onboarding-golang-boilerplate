@@ -24,7 +24,7 @@ func NewUserModel(db *gorm.DB) *UserModel {
 func (um *UserModel) GetAll(limit, offset int) ([]structs.User, int64, error) {
 	users := []structs.User{}
 	if err := um.db.Select("id", "name", "email", "phone_number", "photo", "user_roles_id", "updated_security", "created_at", "updated_at").
-		Find(&users).Limit(limit).Offset(offset).Error; err != nil {
+		Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -24,7 +24,7 @@ func NewCustomerModel(db *gorm.DB) *CustomerModel {
 
 func (cm *CustomerModel) GetAll(limit, offset int, sort, order string) ([]structs.CustomerResponse, int64, error) {
 	customers := []structs.CustomerResponse{}
-	if err := cm.db.Model(&structs.Customer{}).Find(&customers).Limit(limit).Offset(offset).Order(fmt.Sprintf("%s %s", sort, order)).Error; err != nil {
+	if err := cm.db.Model(&structs.Customer{}).Limit(limit).Offset(offset).Order(fmt.Sprintf("%s %s", sort, order)).Find(&customers).Error; err != nil {
 		return nil, 0, err
 	}
 

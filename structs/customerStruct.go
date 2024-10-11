@@ -15,7 +15,7 @@ type (
 	Customer struct {
 		ID          uuid.UUID      `json:"id" gorm:"primaryKey;type:char(36);not null"`
 		UserID      uuid.UUID      `json:"m_user_id" gorm:"not null"`
-		User        User           `json:"users" gorm:"foreignKey:UserID;migration:-"`
+		User        User           `json:"users" gorm:"foreignKey:UserID;-:migration"`
 		Name        string         `json:"name" gorm:"not null"`
 		PhoneNumber string         `json:"phone_number" gorm:"not null"`
 		Photo       string         `json:"photo_url,omitempty"`

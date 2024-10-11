@@ -70,3 +70,33 @@ func (av *APIVersionOne) Customer() {
 	customer.PUT("", customerController.Update)
 	customer.DELETE("/:id", customerController.Delete)
 }
+
+func (av *APIVersionOne) ProductCategory() {
+	ProductCategoryModel := models.NewProductCategoryModel(av.db)
+	productCategoryController := controllers.NewProductCategoryController(av.db, ProductCategoryModel, av.cfg)
+
+	// ProductCategory := av.api.Group("/productCategories", echojwt.WithConfig(av.cfg.JWT.Config))
+	productCategory := av.api.Group("/productCategories")
+	productCategory.GET("", productCategoryController.Index)
+	productCategory.POST("", productCategoryController.Create)
+	productCategory.GET("/:id", productCategoryController.GetById)
+	productCategory.PUT("", productCategoryController.Update)
+	productCategory.DELETE("/:id", productCategoryController.Delete)
+}
+
+func (av *APIVersionOne) Product() {
+	productModel := models.NewProductModel(av.db)
+	imageHelper, err := helpers.NewImageHelper(av.cfg.AssetStorage.Path, "product_photos")
+	if err != nil {
+		log.Fatal("Failed to initiate an image helper:", err)
+	}
+	productController := controllers.NewProductController(av.db, productModel, av.cfg, imageHelper, av.assetsPath)
+
+	// product := av.api.Group("/products", echojwt.WithConfig(av.cfg.JWT.Config))
+	product := av.api.Group("/products")
+	product.GET("", productController.Index)
+	product.POST("", productController.Create)
+	product.GET("/:id", productController.GetById)
+	product.PUT("", productController.Update)
+	product.DELETE("/:id", productController.Delete)
+}

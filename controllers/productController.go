@@ -17,19 +17,19 @@ import (
 	"gorm.io/gorm"
 )
 
-type CustomerController struct {
+type ProductController struct {
 	db          *gorm.DB
-	model       *models.CustomerModel
+	model       *models.ProductModel
 	cfg         *config.Config
 	imageHelper *helpers.ImageHelper
 	assetPath   string
 }
 
-func NewCustomerController(db *gorm.DB, model *models.CustomerModel, cfg *config.Config, imageHelper *helpers.ImageHelper, assetPath string) *CustomerController {
-	return &CustomerController{db, model, cfg, imageHelper, assetPath}
+func NewProductController(db *gorm.DB, model *models.ProductModel, cfg *config.Config, imageHelper *helpers.ImageHelper, assetPath string) *ProductController {
+	return &ProductController{db, model, cfg, imageHelper, assetPath}
 }
 
-func (uh *CustomerController) Index(c echo.Context) error {
+func (uh *ProductController) Index(c echo.Context) error {
 	per_page, err := strconv.Atoi(c.QueryParam("per_page"))
 	if err != nil {
 		per_page = 10
@@ -40,19 +40,9 @@ func (uh *CustomerController) Index(c echo.Context) error {
 		page = 1
 		log.Println("Failed to parse page query parameter. Defaulting to 1")
 	}
-	sort := c.QueryParam("sort")
-	if sort == "" {
-		sort = "id"
-		log.Println("sort query parameter is empty. Defaulting to \"id\"")
-	}
-	order := c.QueryParam("order")
-	if sort == "" {
-		sort = "ASC"
-		log.Println("sort query parameter is empty. Defaulting to \"ASC\"")
-	}
 
 	offset := (page - 1) * per_page
-	data, total, err := uh.model.GetAll(per_page, offset, sort, order)
+	data, total, err := uh.model.GetAll(per_page, offset)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, data, "")
 	}
@@ -61,7 +51,7 @@ func (uh *CustomerController) Index(c echo.Context) error {
 	return helpers.Response(c, http.StatusOK, pagedData, "")
 }
 
-func (uh *CustomerController) GetById(c echo.Context) error {
+func (uh *ProductController) GetById(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return err
@@ -76,8 +66,8 @@ func (uh *CustomerController) GetById(c echo.Context) error {
 	return helpers.Response(c, http.StatusOK, data, "")
 }
 
-func (uh *CustomerController) Create(c echo.Context) error {
-	var request structs.CustomerRequest
+func (uh *ProductController) Create(c echo.Context) error {
+	var request structs.ProductWithDetailCreateOrUpdate
 
 	if err := c.Bind(&request); err != nil {
 		return helpers.Response(c, http.StatusBadRequest, nil, "")
@@ -103,8 +93,8 @@ func (uh *CustomerController) Create(c echo.Context) error {
 	return helpers.Response(c, http.StatusCreated, data, "")
 }
 
-func (uh *CustomerController) Update(c echo.Context) error {
-	var request structs.CustomerRequest
+func (uh *ProductController) Update(c echo.Context) error {
+	var request structs.ProductWithDetailCreateOrUpdate
 
 	if err := c.Bind(&request); err != nil {
 		return helpers.Response(c, http.StatusBadRequest, nil, "")
@@ -124,13 +114,13 @@ func (uh *CustomerController) Update(c echo.Context) error {
 
 	data, err := uh.model.Update(&request)
 	if err != nil {
-		return helpers.Response(c, http.StatusInternalServerError, "", err.Error())
+		return helpers.Response(c, http.StatusInternalServerError, err.Error(), "")
 	}
 
-	return helpers.Response(c, http.StatusOK, data, "Customer updated")
+	return helpers.Response(c, http.StatusOK, data, "Product updated")
 }
 
-func (uh *CustomerController) Delete(c echo.Context) error {
+func (uh *ProductController) Delete(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return err
@@ -139,5 +129,5 @@ func (uh *CustomerController) Delete(c echo.Context) error {
 		return helpers.Response(c, http.StatusInternalServerError, err.Error(), "")
 	}
 
-	return helpers.Response(c, http.StatusOK, true, "Customer deleted")
+	return helpers.Response(c, http.StatusOK, true, "Product deleted")
 }
