@@ -85,12 +85,12 @@ type ProductDetailRequest struct {
 	Price       float64   `json:"price" validate:"required"`
 	IsAdded     bool      `json:"is_added,omitempty"`
 	IsUpdated   bool      `json:"is_updated,omitempty"`
-	IsDeleted   bool      `json:"is_deleted,omitempty"`
 }
 
 type ProductWithDetailCreateOrUpdate struct {
 	Product
-	Details []ProductDetailRequest `json:"details"`
+	Details        []ProductDetailRequest `json:"details"`
+	DeletedDetails []ProductDetailRequest `json:"deleted_details"`
 }
 
 func (p *Product) BeforeCreate(tx *gorm.DB) error {

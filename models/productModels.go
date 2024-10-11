@@ -138,12 +138,13 @@ func (pm *ProductModel) Update(payload *structs.ProductWithDetailCreateOrUpdate)
 				tx.Rollback()
 				return nil, err
 			}
-		} else if detail.IsDeleted {
-			// Delete product detail
-			if err := tx.Where("id = ?", detail.ID).Delete(&structs.ProductDetail{}).Error; err != nil {
-				tx.Rollback()
-				return nil, err
-			}
+		}
+	}
+
+	for _, detail := range payload.DeletedDetails {
+		if err := tx.Where("id = ?", detail.ID).Delete(&structs.ProductDetail{}).Error; err != nil {
+			tx.Rollback()
+			return nil, err
 		}
 	}
 
