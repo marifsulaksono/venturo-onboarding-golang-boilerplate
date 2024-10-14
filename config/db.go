@@ -26,6 +26,7 @@ func InitDatabase(cfg *Config) (*gorm.DB, error) {
 
 	if err := db.AutoMigrate(
 		&structs.User{}, &structs.Customer{}, &structs.ProductCategory{}, &structs.Product{}, &structs.ProductDetail{},
+		&structs.Sale{}, &structs.SaleDetail{},
 	); err != nil {
 		log.Fatal("Failed to migrate to database:", err)
 	}

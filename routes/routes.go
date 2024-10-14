@@ -100,3 +100,16 @@ func (av *APIVersionOne) Product() {
 	product.PUT("", productController.Update)
 	product.DELETE("/:id", productController.Delete)
 }
+
+func (av *APIVersionOne) Sales() {
+	saleModel := models.NewSaleModel(av.db)
+	saleController := controllers.NewSaleController(av.db, saleModel, av.cfg)
+
+	// sale := av.api.Group("/sales", echojwt.WithConfig(av.cfg.JWT.Config))
+	sale := av.api.Group("/sales")
+	sale.GET("", saleController.Index)
+	sale.POST("", saleController.Create)
+	sale.GET("/:id", saleController.GetById)
+	sale.PUT("", saleController.Update)
+	sale.DELETE("/:id", saleController.Delete)
+}

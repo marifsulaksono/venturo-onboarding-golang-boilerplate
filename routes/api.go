@@ -57,7 +57,7 @@ func (s *HTTPServer) RunHTTPServer() {
 	api.Customer()
 	api.ProductCategory()
 	api.Product()
-	// api.Sales()
+	api.Sales()
 	// api.Report()
 	// api.Assets()
 

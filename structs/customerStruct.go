@@ -11,6 +11,10 @@ func (Customer) TableName() string {
 	return "m_customer"
 }
 
+func (CustomerResponse) TableName() string {
+	return "m_customer"
+}
+
 type (
 	Customer struct {
 		ID          uuid.UUID      `json:"id" gorm:"primaryKey;type:char(36);not null"`
