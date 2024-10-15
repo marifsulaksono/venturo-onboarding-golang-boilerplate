@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"errors"
 	"log"
 	"net/http"
@@ -37,8 +38,11 @@ func (uh *SaleController) Index(c echo.Context) error {
 		log.Println("Failed to parse page query parameter. Defaulting to 1")
 	}
 
+	startDate := c.QueryParam("start_date")
+	endDate := c.QueryParam("end_date")
+
 	offset := (page - 1) * per_page
-	data, total, err := uh.model.GetAll(per_page, offset)
+	data, total, err := uh.model.GetAll(per_page, offset, startDate, endDate)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, data, "")
 	}
@@ -60,6 +64,69 @@ func (uh *SaleController) GetById(c echo.Context) error {
 		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
 	}
 	return helpers.Response(c, http.StatusOK, data, "")
+}
+
+func (uh *SaleController) GetSalesReportByCategoryAndDate(c echo.Context) error {
+	startDate := c.QueryParam("start_date")
+	endDate := c.QueryParam("end_date")
+	categoryId, err := strconv.Atoi(c.QueryParam("category_id"))
+	if err != nil {
+		categoryId = 0
+		log.Println("Failed to parse category_id query parameter. Defaulting to 0")
+	}
+	data, err := uh.model.GetSalesByCategory(startDate, endDate, categoryId)
+	if err != nil {
+		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	}
+
+	_, date, err := helpers.GetPeriod(startDate, endDate)
+	if err != nil {
+		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	}
+	formatedReport := helpers.ReformatSalesReport(data, date)
+
+	return helpers.Response(c, http.StatusOK, formatedReport, "")
+}
+
+func (uh *SaleController) ExportSalesReportByCategoryAndDate(c echo.Context) error {
+	startDate := c.QueryParam("start_date")
+	endDate := c.QueryParam("end_date")
+	categoryId, err := strconv.Atoi(c.QueryParam("category_id"))
+	if err != nil {
+		categoryId = 0
+		log.Println("Failed to parse category_id query parameter. Defaulting to 0")
+	}
+
+	// Get sales data from model
+	data, err := uh.model.GetSalesByCategory(startDate, endDate, categoryId)
+	if err != nil {
+		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	}
+
+	// Get the date range
+	_, dates, err := helpers.GetPeriod(startDate, endDate)
+	if err != nil {
+		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	}
+
+	// Format the sales report
+	formatedReport := helpers.ReformatSalesReport(data, dates)
+
+	// Create a new Excel file in memory
+	buf := new(bytes.Buffer)
+
+	// Call the export function, but pass the buffer instead of saving to disk
+	filename, err := helpers.ExportSalesReport(formatedReport, dates, buf)
+	if err != nil {
+		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
+	}
+
+	// Set headers for file download
+	c.Response().Header().Set(echo.HeaderContentDisposition, "attachment; filename="+filename)
+	c.Response().Header().Set(echo.HeaderContentType, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+	// Write the Excel file to the HTTP response
+	return c.Stream(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf)
 }
 
 func (uh *SaleController) Create(c echo.Context) error {

@@ -108,6 +108,8 @@ func (av *APIVersionOne) Sales() {
 	// sale := av.api.Group("/sales", echojwt.WithConfig(av.cfg.JWT.Config))
 	sale := av.api.Group("/sales")
 	sale.GET("", saleController.Index)
+	sale.GET("/report", saleController.GetSalesReportByCategoryAndDate)
+	sale.GET("/report/download", saleController.ExportSalesReportByCategoryAndDate)
 	sale.POST("", saleController.Create)
 	sale.GET("/:id", saleController.GetById)
 	sale.PUT("", saleController.Update)

@@ -20,9 +20,21 @@ func NewSaleModel(db *gorm.DB) *SaleModel {
 	}
 }
 
-func (sm *SaleModel) GetAll(limit, offset int) ([]structs.Sale, int64, error) {
+func (sm *SaleModel) GetAll(limit, offset int, start, end string) ([]structs.Sale, int64, error) {
 	sales := []structs.Sale{}
-	err := sm.db.Preload("Customer").Select("id, total, customer_id, created_at, updated_at").
+	now := time.Now().Format("2006-01-02")
+	query := sm.db.Preload("Customer").Select("id, total, customer_id, created_at, updated_at")
+
+	// Adjusted the logic to handle both start and end
+	if start != "" && end != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", start, end)
+	} else if start != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", start, now)
+	} else if end != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", "1970-01-01", end)
+	}
+
+	err := query.
 		Limit(limit).
 		Offset(offset).
 		Find(&sales).Error
@@ -37,6 +49,84 @@ func (sm *SaleModel) GetAll(limit, offset int) ([]structs.Sale, int64, error) {
 	}
 
 	return sales, count, nil
+}
+
+func (sm *SaleModel) GetAllReport(start, end string) ([]structs.Sale, error) {
+	sales := []structs.Sale{}
+	now := time.Now().Format("2006-01-02")
+	query := sm.db.Preload("Customer").Select("id, total, customer_id, created_at, updated_at")
+
+	// Adjusted the logic to handle both start and end
+	if start != "" && end != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", start, end)
+	} else if start != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", start, now)
+	} else if end != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", "1970-01-01", end)
+	}
+
+	err := query.Find(&sales).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return sales, nil
+}
+
+// func (sm *SaleModel) GetTotalSalesGroupByDateAndProductCategory() ([]structs.SalesSummary, error) {
+// 	var result []structs.SalesSummary
+// 	query := `
+// 	SELECT
+// 		DATE(s.created_at) AS date,
+// 		pc.name AS product_category,
+// 		p.name AS product_name,
+// 		SUM(s.total) AS total_amount
+// 	FROM
+// 		t_sales s
+// 	JOIN
+// 		t_sales_detail sd ON sd.sale_id = s.id
+// 	JOIN
+// 		m_product p ON sd.product_id = p.id
+// 	JOIN
+// 		m_product_category pc ON p.product_category_id = pc.id
+// 	GROUP BY
+// 		DATE(s.created_at),
+// 		pc.name,
+// 		p.name
+// 	ORDER BY
+// 		DATE(s.created_at),
+// 		pc.name,
+// 		p.name`
+
+// 	if err := sm.db.Raw(query).Scan(&result).Error; err != nil {
+// 		return nil, err
+// 	}
+
+// 	return result, nil
+// }
+
+func (sm *SaleModel) GetSalesByCategory(start, end string, category int) ([]structs.Sale, error) {
+	sales := []structs.Sale{}
+	db := sm.db
+
+	query := db.Preload("Details.Product").Preload("Details.Product.Category").Preload("Details.ProductDetail")
+
+	if category != 0 {
+		query = query.Preload("Details.Product", func(db *gorm.DB) *gorm.DB {
+			return db.Where("product_category_id = ?", category)
+		})
+	}
+
+	if start != "" && end != "" {
+		query = query.Where("t_sales.created_at BETWEEN ? AND ?", start, end)
+	}
+
+	err := query.Order("created_at desc").Find(&sales).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return sales, nil
 }
 
 func (sm *SaleModel) GetById(id uuid.UUID) (structs.Sale, error) {
