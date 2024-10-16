@@ -97,25 +97,20 @@ func (uh *SaleController) ExportSalesReportByCategoryAndDate(c echo.Context) err
 		log.Println("Failed to parse category_id query parameter. Defaulting to 0")
 	}
 
-	// Get sales data from model
 	data, err := uh.model.GetSalesByCategory(startDate, endDate, categoryId)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
 	}
 
-	// Get the date range
 	_, dates, err := helpers.GetPeriod(startDate, endDate)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
 	}
 
-	// Format the sales report
 	formatedReport := helpers.ReformatSalesReport(data, dates)
 
 	// Create a new Excel file in memory
 	buf := new(bytes.Buffer)
-
-	// Call the export function, but pass the buffer instead of saving to disk
 	filename, err := helpers.ExportSalesReport(formatedReport, dates, buf)
 	if err != nil {
 		return helpers.Response(c, http.StatusInternalServerError, nil, err.Error())
