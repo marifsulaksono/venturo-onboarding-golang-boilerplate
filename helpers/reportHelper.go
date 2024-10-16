@@ -39,7 +39,7 @@ func GetPeriod(startDate, endDate string) (map[string]map[string]interface{}, []
 }
 
 func ReformatSalesReport(sales []structs.Sale, periods []string) []map[string]interface{} {
-	salesDetail := make([]map[string]interface{}, 0) // Use a slice to hold the category maps
+	salesDetail := make([]map[string]interface{}, 0)
 	totalPerDate := make(map[string]float64)
 	total := 0.0
 
@@ -74,26 +74,42 @@ func ReformatSalesReport(sales []structs.Sale, periods []string) []map[string]in
 					"category_id":    categoryId,
 					"category_name":  categoryName,
 					"category_total": 0.0,
-					"products":       map[string]map[string]interface{}{},
+					"products":       []map[string]interface{}{},
 				}
 				salesDetail = append(salesDetail, categoryMap)
 			}
 
 			categoryMap["category_total"] = categoryMap["category_total"].(float64) + totalSales
 
-			if categoryMap["products"].(map[string]map[string]interface{})[productId.String()] == nil {
-				categoryMap["products"].(map[string]map[string]interface{})[productId.String()] = map[string]interface{}{
+			// Check if the product already exists in the category's products list
+			products := categoryMap["products"].([]map[string]interface{})
+			var productMap map[string]interface{}
+			productFound := false
+
+			for _, product := range products {
+				if product["product_id"] == productId {
+					productMap = product
+					productFound = true
+					break
+				}
+			}
+
+			if !productFound {
+				// If product does not exist, create a new one
+				productMap = map[string]interface{}{
 					"product_id":         productId,
 					"product_name":       productName,
 					"transactions":       initializePeriod(periods),
 					"transactions_total": 0.0,
 				}
+				products = append(products, productMap)
+				categoryMap["products"] = products // Update the products array
 			}
 
-			product := categoryMap["products"].(map[string]map[string]interface{})[productId.String()]
-			product["transactions_total"] = product["transactions_total"].(float64) + totalSales
+			// Update product's transaction totals
+			productMap["transactions_total"] = productMap["transactions_total"].(float64) + totalSales
 
-			transaction := product["transactions"].(map[string]map[string]interface{})
+			transaction := productMap["transactions"].(map[string]map[string]interface{})
 			transaction[saleDate]["total_sales"] = transaction[saleDate]["total_sales"].(float64) + totalSales
 
 			// Add to total per date and grand total
@@ -101,8 +117,6 @@ func ReformatSalesReport(sales []structs.Sale, periods []string) []map[string]in
 			total += totalSales
 		}
 	}
-
-	// The return type is now a slice of maps, each representing a category
 	return salesDetail
 }
 
@@ -122,84 +136,89 @@ func ExportSalesReport(formatedReport []map[string]interface{}, dates []string, 
 	f := excelize.NewFile()
 
 	sheet := "SalesReport"
-	f.NewSheet(sheet)
+	index, err := f.NewSheet(sheet)
+	if err != nil {
+		return "", err
+	}
 
-	// Set column widths for better readability (adjust as needed)
+	f.SetActiveSheet(index)
 	f.SetColWidth(sheet, "A", "Z", 15)
 
-	// Row 1 - Merge "Menu" and "Periode" + Dates
+	// Set Header
 	f.MergeCell(sheet, "A1", "A2")
 	f.SetCellValue(sheet, "A1", "Menu")
 
-	// Merge period across the date length
-	dateEndCol := string('C' + len(dates) - 1)
-	f.MergeCell(sheet, "C1", dateEndCol+"1")
-	f.SetCellValue(sheet, "C1", "Periode")
+	dateEndCol := string('B' + len(dates) - 1)
+	f.MergeCell(sheet, "B1", dateEndCol+"1")
+	f.SetCellValue(sheet, "B1", "Periode")
 
-	// Fill dates in row 2
 	for i, date := range dates {
-		col := string('C' + i)
+		col := string('B' + i)
 		f.SetCellValue(sheet, col+"2", date)
 	}
 
-	// Merge Total column and set values
-	totalCol := string('C' + len(dates))
+	totalCol := string('B' + len(dates))
 	f.MergeCell(sheet, totalCol+"1", totalCol+"2")
 	f.SetCellValue(sheet, totalCol+"1", "Total")
 
+	// Set Body
 	row := 3
 	for _, category := range formatedReport {
 		categoryName := category["category_name"].(string)
 		categoryTotal := category["category_total"].(float64)
-		products := category["products"].(map[string]map[string]interface{})
+		products := category["products"].([]map[string]interface{})
 
-		// Merge category_name based on the number of products
 		productCount := len(products)
-		endRow := row + productCount - 1
-		f.MergeCell(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", endRow))
+
+		// Merge category_name in the first column, horizontally (A), and not across multiple rows.
+		f.MergeCell(sheet, fmt.Sprintf("A%d", row), fmt.Sprintf("B%d", row))
 		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), categoryName)
 
-		// Merge category_total
-		f.MergeCell(sheet, fmt.Sprintf("%s%d", totalCol, row), fmt.Sprintf("%s%d", totalCol, endRow))
-		f.SetCellValue(sheet, fmt.Sprintf("%s%d", totalCol, row), categoryTotal)
+		// Set category_total in the total column
+		f.MergeCell(sheet, fmt.Sprintf("%s%d", totalCol, row), fmt.Sprintf("%s%d", totalCol, row+productCount-1))
+		f.SetCellValue(sheet, fmt.Sprintf("%d%s", row, totalCol), fmt.Sprintf("Rp. %.f", categoryTotal))
 
+		// Loop through products and add them under the category
 		for _, product := range products {
 			productName := product["product_name"].(string)
 			transactionTotal := product["transactions_total"].(float64)
 			transactions := product["transactions"].(map[string]map[string]interface{})
 
-			// Set product_name
-			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), productName)
+			// Set product_name in the next row (row+1), with no merging needed for products.
+			row++ // Move to the next row for the next product
+			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), productName)
 
 			// Set total sales for each date
 			for i, date := range dates {
-				col := string('C' + i)
-				totalSales := transactions[date]["total_sales"].(float64)
+				col := string('B' + i)
+				totalSales := 0.0
+				if transaction, ok := transactions[date]; ok {
+					totalSales = transaction["total_sales"].(float64)
+				}
 				f.SetCellValue(sheet, fmt.Sprintf("%s%d", col, row), totalSales)
 			}
 
 			// Set transactions_total
 			f.SetCellValue(sheet, fmt.Sprintf("%s%d", totalCol, row), transactionTotal)
-			row++
 		}
+		row++
 	}
 
 	// Set Grand Total row
 	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "Grand Total")
 
 	// Calculate sum of total_sales and transactions_total
-	for i := 0; i <= len(dates); i++ {
-		col := string('C' + i)
-		sumRange := fmt.Sprintf("%s3:%s%d", col, col, row-1)
+	for i := 0; i < len(dates); i++ {
+		col := string('B' + i)
+		sumRange := fmt.Sprintf("%s3:%s%d", col, col, row-1) // Ensure correct range
 		f.SetCellFormula(sheet, fmt.Sprintf("%s%d", col, row), fmt.Sprintf("SUM(%s)", sumRange))
 	}
 
 	// Set sum for transactions_total
-	totalSalesRange := fmt.Sprintf("%s3:%s%d", totalCol, totalCol, row-1)
+	totalSalesRange := fmt.Sprintf("%s3:%s%d", totalCol, totalCol, row-1) // Correct range for transaction totals
 	f.SetCellFormula(sheet, fmt.Sprintf("%s%d", totalCol, row), fmt.Sprintf("SUM(%s)", totalSalesRange))
 
-	err := f.Write(buf)
-	if err != nil {
+	if err := f.Write(buf); err != nil {
 		return "", err
 	}
 
